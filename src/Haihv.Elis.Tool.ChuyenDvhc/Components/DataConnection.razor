@@ -1,0 +1,273 @@
+﻿@using System.Text.Json
+@using System.Text.Json.Serialization
+@using Haihv.Elis.Tool.ChuyenDvhc.Data.Extensions
+@using Haihv.Elis.Tool.ChuyenDvhc.Data.Repositories
+@using Haihv.Elis.Tool.ChuyenDvhc.Extensions
+@using Haihv.Elis.Tool.ChuyenDvhc.Services
+@using Haihv.Elis.Tool.ChuyenDvhc.Settings
+@using Microsoft.Data.SqlClient
+@using Microsoft.Extensions.Caching.Hybrid
+@using Microsoft.Extensions.Caching.Memory
+@using Serilog
+
+@inject IMemoryCache MemoryCache
+@inject HybridCache HybridCache
+@inject IFileService FileService
+@inject ILogger Logger
+
+<MudStack>
+    <MudTextField @bind-Value="_serverAddress"
+                  Label="Máy chủ cơ sở dữ liệu ELIS SQL"
+                  FullWidth="true"
+                  OnBlur="SetNotConnected">
+    </MudTextField>
+    <MudTextField @bind-Value="_databaseName"
+                  Label="Tên cơ sở dữ liệu"
+                  FullWidth="true"
+                  OnBlur="SetNotConnected">
+
+    </MudTextField>
+    <MudTextField @bind-Value="_userName"
+                  Label="Tên đăng nhập"
+                  FullWidth="true"
+                  OnBlur="SetNotConnected">
+    </MudTextField>
+    <MudTextField @bind-Value="_password"
+                  Label="Mật khẩu"
+                  InputType="InputType.Password"
+                  FullWidth="true"
+                  OnBlur="SetNotConnected">
+    </MudTextField>
+    <MudCheckBox T = "bool"
+                 Value="_trustedConnection"
+                 Dense="true"
+                 Label="Sử dụng kết nối an toàn"
+                 ValueChanged="OnTrustedConnectionChangeAction"/>
+    <MudButton Disabled="@_processing" OnClick="StartCheckConnectionAsync" Variant="Variant.Filled"
+               Color="Color.Primary">
+        @if (_processing)
+        {
+            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+            <MudText Class="ms-2">Đang kiểm tra</MudText>
+        }
+        else
+        {
+            <MudText>Kiểm tra kết nối</MudText>
+        }
+    </MudButton>
+    @if (_finishChecking)
+    {
+        <MudAlert Severity="@(IsConnected ? Severity.Success : Severity.Error)"
+                  Dense="true">
+            @if (IsConnected)
+            {
+                <span>Kết nối thành công</span>
+            }
+            else
+            {
+                <a>Kết nối thất bại</a>
+                <br/>
+                <a>@_errorMessage</a>
+            }
+        </MudAlert>
+        @if (IsConnected)
+        {
+            if (!string.IsNullOrWhiteSpace(_errorWriteFile))
+            {
+                <MudAlert Severity="Severity.Warning"
+                          Dense="true">
+                    @_errorWriteFile
+                </MudAlert>
+            }
+
+            <MudAlert Severity="Severity.Warning"
+                      Dense="true">
+                Vui lòng sao lưu dữ liệu trước khi thực hiện các bước tiếp theo!
+            </MudAlert>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Warning"
+                      Dense="true">
+                @_errorMessage
+            </MudAlert>
+        }
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info"
+                  Dense="true">
+            Vui lòng thực hiện kiểm tra kết nối trước khi tiếp tục!
+        </MudAlert>
+    }
+
+</MudStack>
+
+@code {
+    bool _processing = false;
+    bool _finishChecking = false;
+    string _serverAddress = string.Empty;
+    string _databaseName = string.Empty;
+    string _userName = string.Empty;
+    string _password = string.Empty;
+    string _connectionString = string.Empty;
+    [Parameter] public bool IsConnected { get; set; }
+
+    [Parameter] public EventCallback<bool> IsConnectedChanged { get; set; }
+
+    private readonly string _filePath = FilePath.PathConnectionString;
+    bool _trustedConnection = true;
+    string _errorMessage = string.Empty;
+    string _errorWriteFile = string.Empty;
+    bool _isConnected = false;
+    
+    private void SetNotConnected()
+    {
+        var connectionString = $"Server={_serverAddress};" +
+                               $"Database={_databaseName};" +
+                               $"User Id={_userName};" +
+                               $"Password={_password};" +
+                               $"TrustServerCertificate={_trustedConnection};";
+        if (connectionString == _connectionString)
+        {
+            IsConnected = _isConnected;
+            _finishChecking = _isConnected;
+        }
+        else
+        {
+            _finishChecking = false;
+            IsConnected = false;
+        }
+        IsConnectedChanged.InvokeAsync(IsConnected);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConnectionInfoAsync();
+    }
+    
+    async Task StartCheckConnectionAsync()
+    {
+        var connectionString = $"Server={_serverAddress};" +
+                               $"Database={_databaseName};" +
+                               $"User Id={_userName};" +
+                               $"Password={_password};" +
+                               $"TrustServerCertificate={_trustedConnection};";
+        if (connectionString == _connectionString) return;
+        _connectionString = connectionString;
+        _processing = true;
+        _finishChecking = false;
+        _isConnected = false;
+        IsConnected = _isConnected;
+        await IsConnectedChanged.InvokeAsync(IsConnected);
+        StateHasChanged();
+        try
+        {
+            await using var connection = _connectionString.GetConnection();
+            await connection.OpenAsync();
+            await connection.CloseAsync();
+            MemoryCache.Set(CacheDataConnection.ConnectionString, _connectionString);
+            _isConnected = true;
+            _errorMessage = string.Empty;
+            await SaveConnectionInfoAsync();
+            Logger.Information("Kết nối dữ liệu thành công, Server: [{Server}] DataBase: [{DataBase}]", 
+                _serverAddress, _databaseName);
+        }
+        catch (Exception ex)
+        {
+            _isConnected = false;
+            Logger.Error(ex, "Lỗi khi kiểm tra kết nối");
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            IsConnected = _isConnected;
+            await IsConnectedChanged.InvokeAsync(IsConnected);
+            _processing = false;
+            _finishChecking = true;
+        }
+    }
+
+    private class DataConnectionModel
+    {
+        [JsonPropertyName("serverAddress")] public string ServerAddress { get; set; } = "localhost";
+        [JsonPropertyName("databaseName")] public string DatabaseName { get; set; } = "elis";
+        [JsonPropertyName("userName")] public string UserName { get; set; } = "sa";
+        [JsonPropertyName("password")] public string Password { get; set; } = "";
+        [JsonPropertyName("trustedConnection")]
+        public bool TrustedConnection { get; set; } = true;
+    }
+
+    private string _connectionStringEncrypt = string.Empty;
+    private async Task LoadConnectionInfoAsync()
+    {
+        try
+        {
+            _connectionStringEncrypt = await FileService.ReadFileAsync(_filePath);
+            var jsonDecrypted = _connectionStringEncrypt.Decrypt();
+            var connectionInfo = JsonSerializer.Deserialize<DataConnectionModel>(jsonDecrypted);
+            if (connectionInfo != null)
+            {
+                _serverAddress = connectionInfo.ServerAddress;
+                _databaseName = connectionInfo.DatabaseName;
+                _userName = connectionInfo.UserName;
+                _password = connectionInfo.Password;
+                _trustedConnection = connectionInfo.TrustedConnection;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Error reading connection info: [{Message}]", ex.Message);
+            var connectionInfo = new DataConnectionModel();
+            _serverAddress = connectionInfo.ServerAddress;
+            _databaseName = connectionInfo.DatabaseName;
+            _userName = connectionInfo.UserName;
+            _password = connectionInfo.Password;
+            _trustedConnection = connectionInfo.TrustedConnection;
+        }
+    }
+
+    private async Task SaveConnectionInfoAsync()
+    {
+        try
+        {
+            var connectionInfo = new DataConnectionModel
+            {
+                ServerAddress = _serverAddress,
+                DatabaseName = _databaseName,
+                UserName = _userName,
+                Password = _password,
+                TrustedConnection = _trustedConnection
+            };
+            var json = JsonSerializer.Serialize(connectionInfo).Encrypt();
+            if (json == _connectionStringEncrypt) return;
+            // Xoá Data Cache
+            _ = HybridCache.RemoveAsync(CacheData.CapTinh);
+            _ = HybridCache.RemoveAsync(CacheData.CapHuyen());
+            _ = HybridCache.RemoveAsync(CacheData.CapXa());
+            _ = HybridCache.RemoveAsync(CacheThamSoDvhc.CapTinhTruoc);
+            _ = HybridCache.RemoveAsync(CacheThamSoDvhc.CapHuyenTruoc);
+            _ = HybridCache.RemoveAsync(CacheThamSoDvhc.CapXaTruoc);
+            _ = HybridCache.RemoveAsync(CacheThamSoDvhc.CapTinhSau);
+            _ = HybridCache.RemoveAsync(CacheThamSoDvhc.CapHuyenSau);
+            _ = HybridCache.RemoveAsync(CacheThamSoDvhc.CapXaSau);
+            _ = HybridCache.RemoveAsync(CacheThamSoDvhc.CapTinh);
+            _ = HybridCache.RemoveAsync(CacheThamSoBanDo.ThamChieuToBanDo);
+            _ = HybridCache.RemoveAsync(CacheThamSoDvhc.TenDvhcSau);
+            await FileService.WriteFileAsync(_filePath, json);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "Lỗi khi lưu thông tin kết nối");
+            _errorWriteFile = $"Lỗi khi lưu thông tin kết nối: {ex.Message}";
+        }
+    }
+
+    private void OnTrustedConnectionChangeAction(bool trustedConnection)
+    {
+        _trustedConnection = trustedConnection;
+        SetNotConnected();
+    }
+}
+

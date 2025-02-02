@@ -1,0 +1,260 @@
+﻿@using Haihv.Elis.Tool.ChuyenDvhc.Data.Entities
+@using Haihv.Elis.Tool.ChuyenDvhc.Settings
+@using Microsoft.Extensions.Caching.Hybrid
+
+<MudExpansionPanels MultiExpansion="true">
+
+    <ThamChieuDuLieu IsCompleted="_isCompletedThamChieuDuLieu"
+                     IsCompletedChanged="SetCompletedThamChieuDuLieu"/>
+
+    <MudExpansionPanel Expanded="!_isCompletedThamChieuBanDo">
+        <TitleContent>
+            <MudText Typo="Typo.subtitle2">
+                Chọn đơn vị hành chính
+            </MudText>
+        </TitleContent>
+        <ChildContent>
+            <MudStack Row="true" StretchItems="StretchItems.All">
+                <MudCard>
+                    <MudCardContent>
+                        <MudStack>
+                            <MudText Typo="Typo.body1"
+                                     Color="Color.Primary">
+                                Trước chuyển đổi
+                            </MudText>
+                            <SelectDvhc IsBefore="true"
+                                        CapTinh="_capTinhTruoc"
+                                        CapHuyen="_capHuyenTruoc"
+                                        CapXas="_capXaTruoc"
+                                        CapTinhChanged="CapTinhChanged"
+                                        CapHuyenChanged="CapHuyenChanged"
+                                        CapXaChanged="CapXaChanged"/>
+                            <MudDatePicker Label="Ngày sáp nhập"
+                                           Placeholder="Ngày sáp nhập các đơn vị hành chính được chọn về đơn vị hành chính mới"
+                                           AutoClose="true"
+                                           Variant="Variant.Outlined"
+                                           Margin="Margin.Dense"
+                                           MaxDate="DateTime.Today"
+                                           Date="_ngaySatNhap"
+                                           Editable="true"
+                                           DateFormat="dd/MM/yyyy"
+                                           Mask="@(new DateMask("dd/MM/yyyy"))"
+                                           DateChanged="NgaySatNhapChange">
+                                <PickerActions>
+                                    <MudButton Class="mr-auto align-self-start" OnClick="TodayAsync">Hôm nay</MudButton>
+                                </PickerActions>
+                            </MudDatePicker>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+                <MudCard>
+                    <MudCardContent>
+                        <MudStack>
+                            <MudText Typo="Typo.body1"
+                                     Color="Color.Secondary">
+                                Sau chuyển đổi
+                            </MudText>
+                            <SelectDvhc IsBefore="false"
+                                        CapTinh="_capTinhSau"
+                                        CapTinhChanged="CapTinhSauChanged"
+                                        CapHuyen="_capHuyenSau"
+                                        CapHuyenChanged="CapHuyenSauChanged"
+                                        CapXas="@(_capXaSau != null ? [_capXaSau] : [])"
+                                        CapXaChanged="CapXaSauChanged"/>
+
+                            <MudTextField @bind-Value="@_tenDvhcSau"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense"
+                                          Required="true"
+                                          RequiredError="Không được để trống"
+                                          OnBlur="OnTenDonViHanhChinhMoiChange"
+                                          Label="Tên đơn vị hành chính sau sáp nhập"/>
+                            @if (_capXaTruoc.Count == 1 && _capXaSau != null && _capXaTruoc[0]?.MaDvhc == _capXaSau.MaDvhc)
+                            {
+                                <MudCheckBox T="bool"
+                                             Value="_renewPrimaryKey"
+                                             ValueChanged="OnRenewPrimaryKeyChange"
+                                             Dense="true"
+                                             Label="Làm mới các mã theo Đơn vị hành chính"/>
+                            }
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+            </MudStack>
+        </ChildContent>
+    </MudExpansionPanel>
+
+    <ThamChieuTbd DvhcTruocs="_capXaTruoc"
+                  DvhcSau="_capXaSau"
+                  TenDvhcSau="@_tenDvhcSau"
+                  IsCompleted="_isCompletedThamChieuBanDo"
+                  IsCompletedChanged="SetCompletedThamChieuBanDo"/>
+</MudExpansionPanels>
+
+@code
+{
+    [Inject] HybridCache HybridCache { get; set; } = null!;
+
+    [Parameter] public bool IsCompleted { get; set; }
+    [Parameter] public EventCallback<bool> IsCompletedChanged { get; set; }
+
+    private bool _isCompletedThamChieuBanDo = false;
+    private bool _isCompletedThamChieuDuLieu = true;
+    private string _tenDvhcSau = string.Empty;
+    private DvhcRecord? _capTinhTruoc;
+    private DvhcRecord? _capTinhSau;
+    private DvhcRecord? _capHuyenTruoc;
+    private DvhcRecord? _capHuyenSau;
+    private List<DvhcRecord?> _capXaTruoc = [];
+    private DvhcRecord? _capXaSau;
+    private DateTime? _ngaySatNhap;
+    private bool _renewPrimaryKey = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _ngaySatNhap = await HybridCache.GetOrCreateAsync(CacheThamSoDvhc.NgaySatNhap, _ => ValueTask.FromResult(DateTime.Today));
+        _capTinhTruoc = await HybridCache.GetOrCreateAsync(CacheThamSoDvhc.CapTinhTruoc, _ => ValueTask.FromResult(_capHuyenTruoc));
+        _capTinhSau = await HybridCache.GetOrCreateAsync(CacheThamSoDvhc.CapTinhSau, _ => ValueTask.FromResult(_capTinhSau));
+        _capHuyenTruoc = await HybridCache.GetOrCreateAsync(CacheThamSoDvhc.CapHuyenTruoc, _ => ValueTask.FromResult(_capHuyenTruoc));
+        _capHuyenSau = await HybridCache.GetOrCreateAsync(CacheThamSoDvhc.CapHuyenSau, _ => ValueTask.FromResult(_capHuyenSau));
+        _capXaTruoc = await HybridCache.GetOrCreateAsync(CacheThamSoDvhc.CapXaTruoc, _ => ValueTask.FromResult(_capXaTruoc));
+        _capXaSau = await HybridCache.GetOrCreateAsync(CacheThamSoDvhc.CapXaSau, _ => ValueTask.FromResult(_capXaSau));
+        _tenDvhcSau = await HybridCache.GetOrCreateAsync(CacheThamSoDvhc.TenDvhcSau, _ => ValueTask.FromResult(_tenDvhcSau));
+        _renewPrimaryKey = await HybridCache.GetOrCreateAsync(CacheThamSoDvhc.RenewPrimaryKey, _ => ValueTask.FromResult(_renewPrimaryKey));
+    }
+
+    private async Task CapTinhChanged(DvhcRecord? capTinh)
+    {
+        if (capTinh == null) return;
+        _capTinhTruoc = capTinh;
+        _capTinhSau ??= capTinh;
+        _capHuyenTruoc = null;
+        _capXaTruoc = [];
+        // Set Cache
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapTinhTruoc, _capTinhTruoc);
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapTinhSau, _capTinhSau);
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapHuyenTruoc, _capHuyenTruoc);
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapXaTruoc, _capXaTruoc);
+    }
+
+    private async Task CapHuyenChanged(DvhcRecord? capHuyen)
+    {
+        if (capHuyen == null) return;
+        _capHuyenTruoc = capHuyen;
+        _capHuyenSau ??= capHuyen;
+        _capXaTruoc = [];
+        
+        // Set Cache
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapHuyenTruoc, _capHuyenTruoc);
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapHuyenSau, _capHuyenSau);
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapXaTruoc, _capXaTruoc);
+    }
+
+    
+    private async Task CapXaChanged(IEnumerable<DvhcRecord?>? capXa)
+    {
+        if (capXa == null) return;
+        _capXaTruoc = capXa.ToList();
+        if (_capXaTruoc.Count == 0) return;
+        _capXaSau = _capXaTruoc[0];
+        if (string.IsNullOrWhiteSpace(_tenDvhcSau))
+            _tenDvhcSau = _capXaTruoc.Count > 0 ? _capXaTruoc[0]?.Ten ?? string.Empty : string.Empty;
+        var renew = !(_capXaTruoc.Count == 1 && _capXaSau != null && _capXaTruoc[0]?.MaDvhc == _capXaSau.MaDvhc);
+        await OnRenewPrimaryKeyChange(renew);
+        // Set Cache
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapXaTruoc, _capXaTruoc);
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapXaSau, _capXaSau);
+        await HybridCache.SetAsync(CacheThamSoDvhc.TenDvhcSau, _tenDvhcSau);
+    }
+
+    private async Task CapTinhSauChanged(DvhcRecord? capTinh)
+    {
+        if (_capTinhSau != null && (capTinh == null || capTinh.MaDvhc == _capTinhSau.MaDvhc)) return;
+        _capTinhSau = capTinh;
+        _capHuyenSau = null;
+        _capXaSau = null;
+        // Set Cache
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapTinhSau, _capTinhSau);
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapHuyenSau, _capHuyenSau);
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapXaSau, _capXaSau);
+    }
+
+    private async Task CapHuyenSauChanged(DvhcRecord? capHuyen)
+    {
+        if (_capHuyenSau != null && (capHuyen == null || capHuyen.MaDvhc == _capHuyenSau.MaDvhc)) return;
+        _capHuyenSau = capHuyen;
+        _capXaSau = null;
+        // Set Cache
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapHuyenSau, _capHuyenSau);
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapXaSau, _capXaSau);
+    }
+
+    private async Task CapXaSauChanged(IEnumerable<DvhcRecord?>? capXa)
+    {
+        if (capXa == null) return;
+        var dvhcSau = capXa.ToList();
+        if (_capXaSau != null && (dvhcSau.Count == 0 || dvhcSau[0] == null || dvhcSau[0]!.MaDvhc == _capXaSau.MaDvhc)) return;
+        _capXaSau = dvhcSau[0];
+        _tenDvhcSau = _capXaSau?.Ten ?? string.Empty;
+        // Set Cache
+        await HybridCache.SetAsync(CacheThamSoDvhc.CapXaSau, _capXaSau);
+        await HybridCache.SetAsync(CacheThamSoDvhc.TenDvhcSau, _tenDvhcSau);
+        var renew = !(_capXaTruoc.Count == 1 && _capXaSau != null && _capXaTruoc[0]?.MaDvhc == _capXaSau.MaDvhc);
+        await OnRenewPrimaryKeyChange(renew);
+        IsCompletedChangedHandler();
+    }
+
+    private void TodayAsync(MouseEventArgs arg)
+    {
+        _ngaySatNhap = DateTime.Today;
+    }
+
+    private bool _isCompleted= false;
+    private void IsCompletedChangedHandler()
+    {
+        _isCompleted = _capXaSau != null && _capXaTruoc.Count > 0 && !string.IsNullOrWhiteSpace(_tenDvhcSau) &&
+                       _isCompletedThamChieuBanDo && _isCompletedThamChieuDuLieu;
+        if (IsCompleted == _isCompleted) return;
+        IsCompleted = _isCompleted;
+        IsCompletedChanged.InvokeAsync(IsCompleted);
+    }
+    
+    private void SetCompletedThamChieuBanDo(bool isCompletedThamChieuBanDo)
+    {
+        if (_isCompletedThamChieuBanDo == isCompletedThamChieuBanDo) return;
+        _isCompletedThamChieuBanDo = isCompletedThamChieuBanDo;
+        IsCompletedChangedHandler();
+    }
+
+    private void SetCompletedThamChieuDuLieu(bool isCompletedThamChieuDuLieu)
+    {
+        if (_isCompletedThamChieuDuLieu == isCompletedThamChieuDuLieu) return;
+        _isCompletedThamChieuDuLieu = isCompletedThamChieuDuLieu;
+        IsCompletedChangedHandler();
+    }
+
+    private async Task NgaySatNhapChange(DateTime? ngaySatNhap)
+    {
+        if (ngaySatNhap == null || ngaySatNhap.Value.Date == _ngaySatNhap)
+            return;
+        _ngaySatNhap = ngaySatNhap;
+        if (ngaySatNhap.Value.Date == DateTime.Today)
+        {
+            await HybridCache.RemoveAsync(CacheThamSoDvhc.NgaySatNhap);
+        }
+
+        await HybridCache.SetAsync(CacheThamSoDvhc.NgaySatNhap, _ngaySatNhap);
+        StateHasChanged();
+    }
+
+    private async Task OnTenDonViHanhChinhMoiChange()
+    {
+        await HybridCache.SetAsync(CacheThamSoDvhc.TenDvhcSau, _tenDvhcSau);
+    }
+
+    private async Task OnRenewPrimaryKeyChange(bool renewPrimaryKey)
+    {
+        _renewPrimaryKey = renewPrimaryKey;
+        await HybridCache.SetAsync(CacheThamSoDvhc.RenewPrimaryKey, _renewPrimaryKey);
+    }
+}

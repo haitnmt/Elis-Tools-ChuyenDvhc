@@ -1,0 +1,75 @@
+﻿@using Serilog
+@inject ILogger Logger
+<MudStack>
+    <MudAlert Severity="Severity.Warning" ShowCloseIcon="false">
+        <MudText>
+            Vui lòng kiểm tra lại thông tin cấu hình trước khi tiếp tục!
+        </MudText>
+        <MudCheckBox T = "bool"
+                     Value="_isBackupConfirmed" 
+                     Dense="true"
+                     Label="Đã sao lưu cơ sở dữ liệu"
+                     ValueChanged="SetBackupConfirmed"></MudCheckBox>
+        <MudCheckBox T = "bool"
+                     Value="_isConfigurationVerified"
+                     Dense="true"
+                     Label="Đã kiểm tra thông tin tham chiếu"
+                     ValueChanged="SetConfigurationVerified"></MudCheckBox>
+    </MudAlert>
+    <MudSpacer/>
+    <MudAlert Severity="Severity.Info" ShowCloseIcon="false" >
+        <MudText>
+            Tùy trọn
+        </MudText>
+        <MudCheckBox T ="bool"
+                     Value="IsAuditEnabled"
+                     Dense="true"
+                     Label="Tạo bảng tham chiếu dữ liệu [Điều kiện cần để xuất ra Excel]"
+                     ValueChanged="SetAuditEnabled"
+                     Disabled="true"/>
+        <MudText>Tạm thời bỏ qua (Chưa cần thiết)</MudText>
+    </MudAlert>
+    <MudAlert Severity="Severity.Error" ShowCloseIcon="false">
+        <MudText Typo="Typo.h6">Lưu ý quan trọng:</MudText>
+        <MudText>Đóng tất cả các kết nối đến dữ liệu trước khi thực hiện</MudText>
+        <MudText>Chỉ nên thực hiện làm mới mã dữ liệu khi không còn kết nối có thực hiện cập nhật dữ liệu</MudText>
+        <MudText>Dễ xảy ra lỗi khi có một kết nối dữ liệu khác thực hiện cập nhật dữ liệu</MudText>
+    </MudAlert>
+</MudStack>
+
+@code {
+    [Parameter] public bool IsCompleted { get; set; }
+    [Parameter] public EventCallback<bool> IsCompletedChanged { get; set; }
+    [Parameter] public bool IsAuditEnabled { get; set; }
+    [Parameter] public EventCallback<bool> IsAuditEnabledChanged { get; set; }
+    bool _isBackupConfirmed = false;
+    bool _isConfigurationVerified = false;
+    
+    private void SetBackupConfirmed(bool value)
+    {
+        _isBackupConfirmed = value;
+        SetCompleted();
+    }
+    
+    private void SetCompleted()
+    {
+        IsCompleted = _isBackupConfirmed && _isConfigurationVerified;
+        if (IsCompleted)
+        {
+            Logger.Information("Cấu hình đã được kiểm tra");
+        }
+        IsCompletedChanged.InvokeAsync(IsCompleted);
+    }
+    
+    public void SetAuditEnabled(bool value)
+    {
+        IsAuditEnabled = value;
+        IsAuditEnabledChanged.InvokeAsync(IsAuditEnabled);
+    }
+
+    private void SetConfigurationVerified(bool value)
+    {
+        _isConfigurationVerified = value;
+        SetCompleted();
+    }
+}

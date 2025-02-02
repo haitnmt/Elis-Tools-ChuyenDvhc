@@ -1,0 +1,51 @@
+﻿<MudTimelineItem Color="ColorTimeLine">
+    <ItemContent>
+        <MudPaper Elevation="0" Class="mt-n1">
+            <MudText Color="ColorTimeLine" Typo="Typo.h6" GutterBottom="true">
+                @Label
+            </MudText>
+            @if (IsCompleted)
+            {
+                @if (!string.IsNullOrWhiteSpace(Error))
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">
+                        <MudText>@Time: @Error</MudText>
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true">
+                        @Time: @SuccessMessage
+                    </MudAlert>
+                }
+            }
+            else
+            {
+                @if(ColorTimeLine == Color.Default)
+                {
+                    <MudText Typo="Typo.body2">Chưa thực hiện</MudText>
+                }
+                else
+                {
+                    <MudProgressLinear Size="Size.Medium" Color="Color.Primary" Rounded="true"
+                                       Indeterminate="@(MaxCount == 0)" Max="MaxCount"
+                                       Buffer="@(BufferCount > 0 && MaxCount > 0)" Value="CurrentCount"/>
+                    <MudText Color="Color.Primary" Typo="Typo.body2">@ProcessingMessage</MudText>
+                }
+            }
+        </MudPaper>
+    </ItemContent>
+</MudTimelineItem>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Time { get; set; } = DateTime.Now.ToString("HH:mm:ss");
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public bool IsCompleted { get; set; }
+    [Parameter] public Color ColorTimeLine { get; set; } = Color.Default;
+    [Parameter] public long MaxCount { get; set; }
+    [Parameter] public long CurrentCount { get; set; }
+    [Parameter] public long BufferCount { get; set; }
+    [Parameter] public string SuccessMessage { get; set; } = "Đã hoàn thành";
+    [Parameter] public string ProcessingMessage { get; set; } = "Đang thực hiện";
+}

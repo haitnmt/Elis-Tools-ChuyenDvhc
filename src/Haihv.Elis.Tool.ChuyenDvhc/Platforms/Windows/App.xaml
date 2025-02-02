@@ -1,0 +1,7 @@
+﻿<maui:MauiWinUIApplication
+    x:Class="Haihv.Elis.Tool.ChuyenDvhc.WinUI.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:maui="using:Microsoft.Maui"
+    xmlns:local="using:Haihv.Elis.Tool.ChuyenDvhc.WinUI">
+</maui:MauiWinUIApplication>

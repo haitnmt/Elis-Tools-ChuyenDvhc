@@ -1,0 +1,102 @@
+﻿@page "/"
+
+<MudStepper CenterLabels="true"
+            @bind-ActiveIndex="_index">
+    <ConnectorTemplate Context="step">
+        <div class="mud-stepper-nav-connector">
+            @{
+                var value = step.Completed ? 100 : 0;
+                <MudProgressLinear Indeterminate="@(step.IsActive)" Striped Value="value" Min="0" Max="100"
+                                   Color="Color.Primary"
+                                   Style="height: 2px; background-color: #d4ddeb; border-radius: 2px;"/>
+            }
+        </div>
+    </ConnectorTemplate>
+    <ChildContent>
+        <MudStep Title="Giới thiệu">
+            <div style="@Style">
+                <MudText Typo="Typo.body2">
+                    Công cụ chuyển đổi đơn vị hành chính được phát triển nhằm hỗ trợ trong việc chuyển đổi dữ liệu các
+                    thửa đất trên cơ sở dữ liệu ELIS SQL, khi có các thay đổi về địa giới hành chính, 
+                    bao gồm việc sáp nhập, chia tách, hoặc đổi tên đơn vị hành chính.
+                </MudText>
+            </div>
+        </MudStep>
+        <MudStep Title="Kết nối"
+                 SecondaryText="Dữ liệu ELIS SQL">
+            <div style="@Style">
+                <DataConnection @bind-IsConnected="_isConnected"/>
+            </div>
+        </MudStep>
+        <MudStep Title="Cấu hình"
+                 SecondaryText="Tham số chuyển đổi">
+            <div style="@Style">
+                <ConfigDataTransfer @bind-IsCompleted="_isCompletedConfig"/>
+            </div>
+        </MudStep>
+        <MudStep Title="Xác nhận" SecondaryText="Kiểm tra lại thông tin và tùy trọn">
+            <div style="@Style">
+                <ConfirmConfig @bind-IsCompleted="_isConfigurationVerified"
+                               @bind-IsAuditEnabled="_isAuditEnabled"/>
+            </div>
+        </MudStep>
+        <MudStep Title="Thực hiện"
+                 SecondaryText="Chuyển đổi dữ liệu">
+            <div style="@Style">
+                <ProcessingDataTransfer IsAuditEnabled="_isAuditEnabled"
+                                        IsFinishedChanged="FinishedDataTransfer"/>
+            </div>
+        </MudStep>
+        <MudStep Title="Hoàn thành"
+                 @bind-Completed="_completed">
+            <div style="@Style">
+                Hoàn thành
+            </div>
+        </MudStep>
+    </ChildContent>
+
+    <ActionContent Context="stepper">
+        <MudButton OnClick="@(() => stepper.ResetAsync())"
+                   Disabled="@(_index <= 0 || (!_isFinished && _index == 4))">
+            Làm lại
+        </MudButton>
+        @if (!_completed)
+        {
+            <MudButton OnClick="@(() => stepper.PreviousStepAsync())"
+                       Disabled="@(_index <= 0 || (!_isFinished && _index == 4))"
+                       StartIcon="@Icons.Material.Filled.ArrowBack"
+                       Color="Color.Primary">
+                Quay lại
+            </MudButton>
+            <MudSpacer/>
+            <MudButton OnClick="@(() => stepper.NextStepAsync())"
+                       Disabled="@((!_isConnected && _index == 1) || 
+                                   (!_isCompletedConfig && _index == 2) ||
+                                   (!_isConfigurationVerified && _index == 3) ||
+                                   (!_isFinished && _index == 4))"
+                       EndIcon="@Icons.Material.Filled.ArrowForward"
+                       Color="Color.Primary">
+                Tiếp theo
+            </MudButton>
+        }
+    </ActionContent>
+</MudStepper>
+
+@code
+
+{
+    bool _isConnected;
+    bool _isConfigurationVerified;
+    bool _isCompletedConfig;
+    bool _completed;
+    int _index;
+    bool _isAuditEnabled;
+    bool _isFinished;
+    private const string Style = "height: calc(100vh - 235px); overflow: auto";
+
+    private void FinishedDataTransfer(bool isFinished)
+    {
+        _isFinished = isFinished;
+        StateHasChanged();
+    }
+}

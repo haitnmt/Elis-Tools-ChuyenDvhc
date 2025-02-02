@@ -1,0 +1,89 @@
+﻿<MudSnackbarProvider/>
+<MudTimeline TimelinePosition="TimelinePosition.Start" TimelineAlign="TimelineAlign.Start">
+    @* Khởi tạo bảng tham chiếu dữ liệu *@
+    @if (IsAuditEnabled)
+    {
+        <MudTimelineItem Color="_colorKhoiTaoDuLieu">
+            <ItemContent>
+                <MudPaper Elevation="0" Class="mt-n1">
+                    <MudText Color="_colorKhoiTaoDuLieu" Typo="Typo.h6" GutterBottom="true">Tạo bảng tham chiếu dữ
+                        liệu
+                    </MudText>
+                    @if (_isCompletedKhoiTaoDuLieu)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(_errorKhoiTaoDuLieu))
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true">
+                                <MudText>@_timeKhoiTaoDuLieu: @_errorKhoiTaoDuLieu</MudText>
+                                <MudText>Không xuất được Excel sau khi hoàn thành</MudText>
+                                <MudText>Bạn có muốn tiếp tục thực hiện và bỏ qua lưu thông tin tham chiếu không?
+                                </MudText>
+                                <MudButton OnClick="SkipAuditDatabaseAsync">Tiếp tục</MudButton>
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Success" Dense="true">
+                                @_timeKhoiTaoDuLieu: Đã hoàn thành
+                            </MudAlert>
+                        }
+                    }
+                    else
+                    {
+                        @if(_colorKhoiTaoDuLieu == Color.Default)
+                        {
+                            <MudText Typo="Typo.body2">Chưa thực hiện</MudText>
+                        }
+                        else
+                        {
+                            <MudProgressLinear Size="Size.Medium" Color="Color.Primary" Rounded="true"
+                                               Indeterminate="true"/>
+                            <MudText Color="Color.Primary" Typo="Typo.body2">Đang thực hiện</MudText>
+                        }
+
+                    }
+                </MudPaper>
+            </ItemContent>
+        </MudTimelineItem>
+    }
+
+    @* Tạo hoặc cập nhật thửa đất lịch sử *@
+    <TimeLineProcess Label="Tạo và cập nhật tham chiếu thửa đất"
+                     ColorTimeLine="_colorThamChieuThuaDat"
+                     IsCompleted="_isCompletedThamChieuThuaDat"
+                     Time="@_timeThamChieuThuaDat"
+                     Error="@_errorThamChieuThuaDat"
+                     MaxCount="_totalThamChieuThuaDat"
+                     BufferCount="_bufferThamChieuThuaDat"
+                     SuccessMessage="@_messageSuccessThamChieuThuaDat"
+                     CurrentCount="_currentThamChieuThuaDat"/>
+
+
+    @* Cập nhật thông tin tờ bản đồ *@
+    <TimeLineProcess Label="Cập nhật thông tin tờ bản đồ (Ghi chú)"
+                     ColorTimeLine="_colorUpdateToBanDo"
+                     IsCompleted="_isCompletedUpdateToBanDo"
+                     Time="@_timeUpdateToBanDo"
+                     Error="@_errorUpdateToBanDo"
+                     SuccessMessage="@_messageUpdateToBanDoSuccess"/>
+
+    @* Cập nhật thông tin đơn vị hành chính *@
+    <TimeLineProcess Label="Cập nhật thông tin đơn vị hành chính"
+                     ColorTimeLine="_colorUpdateDvhc"
+                     IsCompleted="_isCompletedUpdateDvhc"
+                     Time="@_timeUpdateDvhc"
+                     Error="@_errorUpdateDvhc"/>
+    @* Làm mới mã theo đơn vị hành chính *@
+    @if (_renewPrimaryKey)
+    {
+        <TimeLineProcess Label="Làm mới mã thửa đất theo đơn vị hành chính"
+                         ColorTimeLine="_colorUpdatePrimaryKey"
+                         IsCompleted="_isCompletedUpdatePrimaryKey"
+                         Time="@_timeUpdatePrimaryKey"
+                         Error="@_errorUpdatePrimaryKey"
+                         MaxCount="_totalUpdatePrimaryKey"
+                         BufferCount="_bufferUpdatePrimaryKey"
+                         CurrentCount="_currentUpdatePrimaryKey"
+                         ProcessingMessage="@_processingMessageUpdatePrimaryKey"/>
+    }
+</MudTimeline>

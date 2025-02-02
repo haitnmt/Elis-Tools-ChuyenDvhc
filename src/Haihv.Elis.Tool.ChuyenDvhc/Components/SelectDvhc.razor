@@ -1,0 +1,68 @@
+@using Haihv.Elis.Tool.ChuyenDvhc.Data.Entities
+<MudStack>
+    <MudAutocomplete Label="Chọn đơn vị hành chính cấp Tỉnh"
+                     @bind-Value="CapTinh"
+                     SearchFunc="GetCapTinh"
+                     ToStringFunc="DvhcToString"
+                     Margin="Margin.Dense"
+                     Dense="true"
+                     Variant="Variant.Outlined"
+                     ShowProgressIndicator="true"
+                     ProgressIndicatorColor="Color.Default"
+                     OnBlur="SetCapTinh">
+        <ItemTemplate Context="ct">
+            <MudStack Row="true" StretchItems="StretchItems.All">
+                <MudText Typo="Typo.subtitle1">
+                    @ct.Ten
+                </MudText>
+                <MudText Typo="Typo.subtitle1" Align="Align.End">
+                    [Mã: @ct.Ma.ToString("00")]
+                </MudText>
+            </MudStack>
+        </ItemTemplate>
+    </MudAutocomplete>
+    <MudAutocomplete Label="Chọn đơn vị hành chính cấp Huyện"
+                     @bind-Value="CapHuyen"
+                     SearchFunc="GetCapHuyen"
+                     ToStringFunc="DvhcToString"
+                     Margin="Margin.Dense"
+                     Dense="true"
+                     Variant="Variant.Outlined"
+                     ShowProgressIndicator="true"
+                     ProgressIndicatorColor="Color.Default"
+                     OnBlur="SetCapHuyen">
+        <ItemTemplate Context="ch">
+            <MudStack Row="true" StretchItems="StretchItems.All">
+                <MudText Typo="Typo.subtitle1">
+                    @ch.Ten
+                </MudText>
+                <MudText Typo="Typo.subtitle1" Align="Align.End">
+                    [Mã: @ch.Ma.ToString("000")]
+                </MudText>
+            </MudStack>
+        </ItemTemplate>
+    </MudAutocomplete>
+    <MudSelect T="DvhcRecord"
+               Label="Chọn đơn vị hành chính cấp Xã"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               Dense="true"
+               SelectedValues="CapXas"
+               ToStringFunc="CapXaToString"
+               MultiSelection="IsBefore"
+               SelectedValuesChanged="SetCapXa">
+        @foreach (var capXa in _capXas)
+        {
+            <MudSelectItem Value="capXa">
+                <MudStack Row="true" StretchItems="StretchItems.All">
+                    <MudText Typo="Typo.subtitle1">
+                        @capXa.Ten
+                    </MudText>
+                    <MudText Typo="Typo.subtitle1" Align="Align.End">
+                        [Mã: @capXa.Ma.ToString("00000")]
+                    </MudText>
+                </MudStack>
+            </MudSelectItem>
+        }
+    </MudSelect>
+</MudStack>

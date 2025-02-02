@@ -1,0 +1,167 @@
+﻿@using Haihv.Elis.Tool.ChuyenDvhc.Settings
+@using Microsoft.Extensions.Caching.Hybrid
+
+<MudExpansionPanel Expanded="false" Dense="true">
+    <TitleContent>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.subtitle2">
+                Cập nhật nội dung dữ liệu
+            </MudText>
+            <MudSpacer/>
+            <MudButton Color="Color.Info" OnClick="ResetDefaultAsync">
+                <MudText Typo="Typo.button">Mặc định</MudText>
+            </MudButton>
+            <MudTooltip>
+                <ChildContent>
+                    <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Help" Color="Color.Info"/>
+                </ChildContent>
+                <TooltipContent>
+                    <MudText Typo="Typo.h6">Hướng dẫn</MudText>
+                    <MudDivider/>
+                    <MudText Align="Align.Start" Typo="Typo.body2">@ThamSoThayThe.NgaySapNhap: Ngày sáp nhập</MudText>
+                    <MudText Align="Align.Start" Typo="Typo.body2">@ThamSoThayThe.SoThua: Số thửa đất</MudText>
+                    <MudText Align="Align.Start" Typo="Typo.body2">@ThamSoThayThe.ToBanDo: Số tờ bản đồ</MudText>
+                    <MudText Align="Align.Start" Typo="Typo.body2">@ThamSoThayThe.DonViHanhChinh: Tên đơn vị hành chính
+                    </MudText>
+                </TooltipContent>
+            </MudTooltip>
+        </MudStack>
+    </TitleContent>
+    <ChildContent>
+        <MudGrid Spacing="2" Class="mb-3">
+            <MudItem xs="12" md="6" xxl="3">
+                <MudTextField @bind-Value="@_toBanDoCu" Variant="Variant.Outlined" Margin="Margin.Dense"
+                    HelperText="Hiển thị tại [Xem Thông tin thửa đất cũ]" Label="Tờ bản đồ cũ"
+                    TextChanged="@(t => SetToBanDoCuCache(t))" />
+            </MudItem>
+            <MudItem xs="12" md="6" xxl="3">
+                <MudTextField @bind-Value="@_ghiChuToBanDo" Variant="Variant.Outlined" Margin="Margin.Dense"
+                    HelperText="Hiển thị tại [Bảng mã -> Danh mục Tờ bản đồ]" Label="Ghi chú Tờ bản đồ"
+                    TextChanged="@(t => SetGhiChuToBanDoCache(t))" />
+            </MudItem>
+            <MudItem xs="12" md="6" xxl="3">
+                <MudTextField @bind-Value="@_ghiChuThuaDat" Variant="Variant.Outlined" Margin="Margin.Dense"
+                    HelperText="Hiển thị tại [Thông tin đăng ký -> thửa đất]" Label="Ghi chú Thửa đất"
+                    TextChanged="@(t => SetGhiChuThuaDatCache(t))" />
+            </MudItem>
+            <MudItem xs="12" md="6" xxl="3">
+                <MudTextField @bind-Value="@_ghiChuGiayChungNhan" Variant="Variant.Outlined" Margin="Margin.Dense"
+                    HelperText="Hiển thị tại [Thông tin đăng ký -> Giấy chứng nhận]" Label="Ghi chú Giấy chứng nhận"
+                    TextChanged="@(t => SetGhiChuGiayChungNhanCache(t))" />
+            </MudItem>
+        </MudGrid>
+    </ChildContent>
+</MudExpansionPanel>
+
+@code
+{
+    [Inject] HybridCache HybridCache { get; set; } = null!;
+    [Parameter] public bool IsCompleted { get; set; }
+    [Parameter] public EventCallback<bool> IsCompletedChanged { get; set; }
+    private string _toBanDoCu = ThamSoThayThe.DefaultToBanDoCu;
+    private string _ghiChuToBanDo = ThamSoThayThe.DefaultGhiChuToBanDo;
+    private string _ghiChuThuaDat = ThamSoThayThe.DefaultGhiChuThuaDat;
+    private string _ghiChuGiayChungNhan = ThamSoThayThe.DefaultGhiChuGiayChungNhan;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SetAllCache();
+    }
+
+    /// <summary>
+    /// Thiết lập tất cả các giá trị cache từ bộ nhớ.
+    /// </summary>
+    /// <returns>Task đại diện cho thao tác không đồng bộ.</returns>
+    private async Task SetAllCache()
+    {
+        _toBanDoCu = await HybridCache.GetOrCreateAsync(CacheThamSoDuLieu.ToBanDoCu, _ => ValueTask.FromResult(_toBanDoCu));
+        _ghiChuToBanDo = await HybridCache.GetOrCreateAsync(CacheThamSoDuLieu.GhiChuToBanDo, _ =>
+            ValueTask.FromResult(_ghiChuToBanDo));
+        _ghiChuThuaDat = await HybridCache.GetOrCreateAsync(CacheThamSoDuLieu.GhiChuThuaDat, _ =>
+            ValueTask.FromResult(_ghiChuThuaDat));
+        _ghiChuGiayChungNhan = await HybridCache.GetOrCreateAsync(CacheThamSoDuLieu.GhiChuGiayChungNhan, _ =>
+            ValueTask.FromResult(_ghiChuGiayChungNhan));
+        SetCompleted();
+    }
+
+    /// <summary>
+    /// Thiết lập giá trị cache cho Tờ bản đồ cũ.
+    /// </summary>
+    /// <param name="textChanged">Giá trị mới của Tờ bản đồ cũ.</param>
+    private async Task SetToBanDoCuCache(string textChanged)
+    {
+        if (string.IsNullOrWhiteSpace(textChanged) || textChanged == _toBanDoCu)
+            return;
+        _toBanDoCu = textChanged;
+        await HybridCache.SetAsync(CacheThamSoDuLieu.ToBanDoCu, textChanged);
+        SetCompleted();
+    }
+
+
+    /// <summary>
+    /// Thiết lập giá trị cache cho Ghi chú Tờ bản đồ.
+    /// </summary>
+    /// <param name="textChanged">Giá trị mới của Ghi chú Tờ bản đồ.</param>
+    private async Task SetGhiChuToBanDoCache(string textChanged)
+    {
+        if (string.IsNullOrWhiteSpace(textChanged) || textChanged == _ghiChuToBanDo)
+            return;
+        _ghiChuToBanDo = textChanged;
+        await HybridCache.SetAsync(CacheThamSoDuLieu.GhiChuToBanDo, textChanged);
+        SetCompleted();
+    }
+
+    /// <summary>
+    /// Thiết lập giá trị cache cho Ghi chú Thửa đất.
+    /// </summary>
+    /// <param name="textChanged">Giá trị mới của Ghi chú Thửa đất.</param>
+    private async Task SetGhiChuThuaDatCache(string textChanged)
+    {
+        if (string.IsNullOrWhiteSpace(textChanged) || textChanged == _ghiChuThuaDat)
+            return;
+        _ghiChuThuaDat = textChanged;
+        await HybridCache.SetAsync(CacheThamSoDuLieu.GhiChuThuaDat, textChanged);
+        SetCompleted();
+    }
+
+    /// <summary>
+    /// Thiết lập giá trị cache cho Ghi chú Giấy chứng nhận.
+    /// </summary>
+    /// <param name="textChanged">Giá trị mới của Ghi chú Giấy chứng nhận.</param>
+    private async Task SetGhiChuGiayChungNhanCache(string textChanged)
+    {
+        if (string.IsNullOrWhiteSpace(textChanged) || textChanged == _ghiChuGiayChungNhan)
+            return;
+        _ghiChuGiayChungNhan = textChanged;
+        await HybridCache.SetAsync(CacheThamSoDuLieu.GhiChuGiayChungNhan, textChanged);
+        SetCompleted();
+    }
+
+    private bool _isCompleted;
+    /// <summary>
+    /// Thiết lập trạng thái hoàn thành.
+    /// </summary>
+    private void SetCompleted()
+    {
+        _isCompleted = !string.IsNullOrWhiteSpace(_toBanDoCu) &&
+                       !string.IsNullOrWhiteSpace(_ghiChuToBanDo) &&
+                       !string.IsNullOrWhiteSpace(_ghiChuThuaDat) &&
+                       !string.IsNullOrWhiteSpace(_ghiChuGiayChungNhan);
+        if (_isCompleted == IsCompleted) return;
+        IsCompleted = _isCompleted;
+        IsCompletedChanged.InvokeAsync(IsCompleted);
+    }
+
+    /// <summary>
+    /// Đặt lại các giá trị mặc định.
+    /// </summary>
+    /// <param name="obj">Đối tượng sự kiện chuột.</param>
+    private async Task ResetDefaultAsync(MouseEventArgs obj)
+    {
+        _toBanDoCu = ThamSoThayThe.DefaultToBanDoCu;
+        _ghiChuToBanDo = ThamSoThayThe.DefaultGhiChuToBanDo;
+        _ghiChuThuaDat = ThamSoThayThe.DefaultGhiChuThuaDat;
+        _ghiChuGiayChungNhan = ThamSoThayThe.DefaultGhiChuGiayChungNhan;
+        await SetAllCache();
+    }
+}

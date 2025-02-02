@@ -1,0 +1,227 @@
+﻿@using Haihv.Elis.Tool.ChuyenDvhc.Data.Entities
+@using Haihv.Elis.Tool.ChuyenDvhc.Data.Repositories
+@using Haihv.Elis.Tool.ChuyenDvhc.Extensions
+@using Haihv.Elis.Tool.ChuyenDvhc.Settings
+@using Microsoft.Extensions.Caching.Hybrid
+@using Microsoft.Extensions.Caching.Memory
+@using Serilog
+
+<MudExpansionPanel Expanded="true" Dense="true">
+    <TitleContent>
+        <MudStack Row="true" Justify="Justify.SpaceBetween">
+            <MudText Typo="Typo.subtitle2">
+                Tờ bản đồ
+            </MudText>
+            <MudSpacer/>
+            @if (DvhcTruocs != null && DvhcTruocs.Any() && DvhcSau != null)
+            {
+                <MudRadioGroup @bind-Value="_usePrefix">
+                    <MudRadio Value="true" Color="Color.Primary" Dense="true">Sử dụng tiền tố</MudRadio>
+                    <MudRadio Value="false" Color="Color.Secondary" Dense="true">Sử dụng tăng dần</MudRadio>
+                </MudRadioGroup>
+                <MudButton Disabled="@_loadingToBanDos" OnClick="LoadBanDoFromDataAsync"
+                           Color="Color.Primary">
+                    @if (_loadingToBanDos)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                        <MudText Class="ms-2" Typo="Typo.button">Đang thực hiện</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.button">Làm mới</MudText>
+                    }
+                </MudButton>
+            }
+        </MudStack>
+    </TitleContent>
+    <ChildContent>
+        @if (DvhcTruocs != null && DvhcTruocs.Any() && DvhcSau != null)
+        {
+            <MudDataGrid Height="@_heightGrid" Class="mb-3" Items="_thamChieuToBanDos"
+                         Dense="true"
+                         Groupable="true"
+                         Filterable="true"
+                         FilterMode="DataGridFilterMode.Simple"
+                         GroupExpanded="true"
+                         MultiSelection="true"
+                         SelectOnRowClick="true"
+                         FilterCaseSensitivity="DataGridFilterCaseSensitivity.Default">
+                <Columns>
+                    <SelectColumn T="ThamChieuToBanDo"/>
+                    <PropertyColumn Property="t => t.Id" Title="STT"/>
+                    <PropertyColumn Property="t => t.TenDvhcTruoc" Title="Đơn vị hành chính trước" Grouping/>
+                    <PropertyColumn Property="t => t.SoToBanDoTruoc" Title="Số tờ trước"/>
+                    <PropertyColumn Property="t => t.TenDvhcSau" Title="Đơn vị hành chính sau"/>
+                    <PropertyColumn Property="t => t.SoToBanDoSau" Title="Số tờ sau"/>
+                </Columns>
+            </MudDataGrid>
+        }
+        else
+        {
+            <MudAlert Class="mb-3" Severity="Severity.Warning" Variant="Variant.Outlined">
+                <MudText Typo="Typo.body2">Vui lòng chọn đơn vị hành chính trước và sau</MudText>
+            </MudAlert>
+        }
+    </ChildContent>
+</MudExpansionPanel>
+
+@code {
+    [Inject] HybridCache HybridCache { get; set; } = null!;
+    [Inject] IMemoryCache MemoryCache { get; set; } = null!;
+    [Inject] ILogger Logger { get; set; } = null!;
+    [Parameter] public IEnumerable<DvhcRecord>? DvhcTruocs { get; set; }
+    [Parameter] public DvhcRecord? DvhcSau { get; set; }
+    [Parameter] public string? TenDvhcSau { get; set; }
+    [Parameter] public bool IsCompleted { get; set; }
+    [Parameter] public EventCallback<bool> IsCompletedChanged { get; set; }
+    
+    private DvhcRecord? _dvhcSau;
+    private IEnumerable<DvhcRecord>? _dvhcTruocs;
+    private string? _tenDvhcSau;
+    private List<ThamChieuToBanDo> _thamChieuToBanDos = [];
+    private bool _isCompleted;
+    private string _heightGrid = "null";
+    private const string MaxHeight = "null";
+    private bool _loadingToBanDos = false;
+    private bool _usePrefix = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _thamChieuToBanDos = await HybridCache.GetOrCreateAsync(CacheThamSoBanDo.ThamChieuToBanDo,
+            _ => ValueTask.FromResult(_thamChieuToBanDos));
+        _heightGrid = _thamChieuToBanDos.Count > 10 ? MaxHeight : "null";
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (DvhcSau != null && DvhcSau.MaDvhc != _dvhcSau?.MaDvhc)
+        {
+            if (_dvhcSau != null)
+            {
+                _thamChieuToBanDos = [];
+                _heightGrid = "null";
+            }
+
+            _dvhcSau = DvhcSau;
+        }
+
+        if (DvhcTruocs != null && DvhcTruocs.Any() && !DvhcTruocs.EqualsHash(_dvhcTruocs))
+        {
+            if (_dvhcTruocs != null && _dvhcTruocs.Any())
+            {
+                _thamChieuToBanDos = [];
+                _heightGrid = "null";
+            }
+
+            _dvhcTruocs = DvhcTruocs;
+        }
+
+        if (TenDvhcSau == null || TenDvhcSau == _tenDvhcSau) return;
+        if (!string.IsNullOrWhiteSpace(_tenDvhcSau))
+        {
+            _thamChieuToBanDos = [];
+            _heightGrid = "null";
+        }
+        
+        _tenDvhcSau = TenDvhcSau;
+        CheckCompleted();
+    }
+
+    private async Task LoadBanDoFromDataAsync(MouseEventArgs arg)
+    {
+        try
+        {
+            if (_dvhcTruocs == null || !_dvhcTruocs.Any() || _dvhcSau == null)
+            {
+                return;
+            }
+
+            _loadingToBanDos = true;
+            var connectionString = MemoryCache.Get<string>(CacheDataConnection.ConnectionString);
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                Logger.Error("Connection string is null or empty");
+                return;
+            }
+
+            var toBanDoRepository = new ToBanDoRepository(connectionString, Logger);
+
+            var tbds = (await toBanDoRepository.GetToBanDosAsync(_dvhcSau.MaDvhc)).ToList();
+            _thamChieuToBanDos = [];
+            var stt = 0;
+            _thamChieuToBanDos.AddRange(tbds.Select(tbd => new ThamChieuToBanDo
+            {
+                Id = stt++,
+                TenDvhcTruoc = _dvhcSau.Ten,
+                MaDvhcTruoc = _dvhcSau.MaDvhc,
+                TenDvhcSau = _tenDvhcSau ?? _dvhcSau.Ten,
+                MaDvhcSau = _dvhcSau.MaDvhc,
+                SoToBanDoTruoc = $"{tbd.SoTo} [{tbd.TyLe}]",
+                SoToBanDoSau = tbd.SoTo
+            }));
+            var soToBanDoTiepTheo = _usePrefix
+                ? 0
+                : tbds
+                .Where(t => int.TryParse(t.SoTo, out _))
+                .Select(t => int.Parse(t.SoTo))
+                .Max();
+            foreach (var (maDvhc, _, tenDvhc) in 
+                     _dvhcTruocs.Where(d => d.MaDvhc != _dvhcSau.MaDvhc))
+            {
+                var prefix = string.Empty;
+                if (soToBanDoTiepTheo == 0)
+                {
+                    prefix = GetPrefix(tenDvhc);
+                }
+                tbds = (await toBanDoRepository.GetToBanDosAsync(maDvhc)).ToList();
+                _thamChieuToBanDos.AddRange(tbds.Select(tbd => new ThamChieuToBanDo
+                {
+                    Id = stt++,
+                    TenDvhcTruoc = tenDvhc,
+                    MaDvhcTruoc = maDvhc,
+                    MaToBanDoTruoc = tbd.MaToBanDo,
+                    SoToBanDoTruoc = $"{tbd.SoTo} [{tbd.TyLe}]",
+                    TenDvhcSau = _tenDvhcSau ?? _dvhcSau.Ten,
+                    MaDvhcSau = _dvhcSau.MaDvhc,
+                    SoToBanDoSau = string.IsNullOrWhiteSpace(prefix) ? 
+                        soToBanDoTiepTheo++.ToString() : 
+                        $"{prefix}{tbd.SoTo}"
+                }));
+            }
+
+            _heightGrid = _thamChieuToBanDos.Count > 10 ? MaxHeight : "null";
+            CheckCompleted();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            _loadingToBanDos = false;
+        }
+    }
+
+    private static string GetPrefix(string tenDvhc)
+    {
+        // Loại bỏ các từ chỉ cấp xã: xã, thị trấn, phường,
+        tenDvhc = tenDvhc.Replace("Xã", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("Thị trấn", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("Phường", string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Trim();
+        var words = tenDvhc.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        // Lấy các chữ cái đầu của các từ và trả về kết quả
+        return string.Join("", words.Select(w => w[0])).ToLower();
+    }
+
+    private void CheckCompleted()
+    {
+        _isCompleted = _thamChieuToBanDos.Any();
+        if (_isCompleted)
+            HybridCache.SetAsync(CacheThamSoBanDo.ThamChieuToBanDo, _thamChieuToBanDos);
+        else
+            HybridCache.RemoveAsync(CacheThamSoBanDo.ThamChieuToBanDo);
+        IsCompleted = _isCompleted;
+        IsCompletedChanged.InvokeAsync(IsCompleted);
+    }
+}
