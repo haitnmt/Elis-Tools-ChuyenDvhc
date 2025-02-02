@@ -1,0 +1,80 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+/src/**/shelf/
+/src/**/workspace.xml
+# Rider ignored files
+/contentModel.xml
+/modules.xml
+/projectSettingsUpdater.xml
+/.idea.Elis-Tools.iml
+/src/**/contentModel.xml
+/src/**/modules.xml
+/src/**/projectSettingsUpdater.xml
+/src/**/.idea.Elis-Tools.iml
+/src/**/.idea/
+/src/**/.idea/*
+# Editor-based HTTP Client requests
+/httpRequests/
+/src/**/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+/src/**/dataSources/
+/src/**/dataSources.local.xml
+/build/
+/out/
+/src/**/build/
+/src/**/out/
+# VS Code ignored files
+/.vscode/
+/.vscode/*
+/src/**/.vscode/
+/src/**/.vscode/*
+# Visual Studio ignored files
+/.vs/
+/src/**/.vs/
+/.vs/*
+*.user
+*.suo
+*.vcxproj.user
+*.vcxproj.filters
+*.ncb
+*.opensdf
+*.sdf
+*.ipch
+*.aps
+*.pch
+*.vspscc
+*.vssscc
+/src/**/*.user
+/src/**/*.suo
+/src/**/*.vcxproj.user
+/src/**/*.vcxproj.filters
+/src/**/*.ncb
+/src/**/*.opensdf
+/src/**/*.sdf
+/src/**/*.ipch
+/src/**/*.aps
+/src/**/*.pch
+/src/**/*.vspscc
+/src/**/*.vssscc
+# iOS and macOS ignored files
+/bin/
+/src/**/bin/
+/obj/
+/src/**/obj/
+
+#MacOS .DS_Store files
+.DS_Store
+/src/**/.DS_Store
+
+#AppSettings
+/src/**/appsettings.Development.json
+/src/**/appsettings.Production.json
+
+#Log
+/src/**/logs/
+
+#Scripts PowerShell
+/src/**/*.ps1
