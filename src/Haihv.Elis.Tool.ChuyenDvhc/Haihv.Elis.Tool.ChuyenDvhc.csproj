@@ -37,10 +37,27 @@
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-        <AssemblyVersion>1.0.9145.0</AssemblyVersion>
-        <FileVersion>1.0.9145.0</FileVersion>
+        <AssemblyVersion>1.0.9170.2</AssemblyVersion>
+        <FileVersion>1.0.9170.2</FileVersion>
         <NeutralLanguage>vi-VN</NeutralLanguage>
         <ApplicationIcon>Resources\AppIcon\app.ico</ApplicationIcon>
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-maccatalyst|AnyCPU'">
+      <IsPublishable>True</IsPublishable>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-windows10.0.19041.0|AnyCPU'">
+      <IsPublishable>True</IsPublishable>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-maccatalyst|AnyCPU'">
+      <IsPublishable>True</IsPublishable>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-windows10.0.19041.0|AnyCPU'">
+      <IsPublishable>True</IsPublishable>
     </PropertyGroup>
 
     <ItemGroup>
@@ -62,10 +79,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Dapper" Version="2.1.35" />
-        <PackageReference Include="InterpolatedSql.Dapper" Version="2.3.0"/>
+        <PackageReference Include="Dapper" Version="2.1.66" />
+        <PackageReference Include="InterpolatedSql.Dapper" Version="2.3.0" />
         <PackageReference Include="Microsoft.Data.SqlClient" Version="6.0.1" />
-        <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="9.0.0-preview.9.24556.5"/>
+        <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="9.1.0-preview.1.25064.3" />
         <PackageReference Include="Microsoft.Maui.Controls" Version="9.0.30" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="9.0.30" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.1" />
@@ -84,6 +101,10 @@
 
     <ItemGroup>
       <None Remove="Resources\AppIcon\app.ico" />
+      <None Include="..\..\..\Elis-Tools-TraCuuGcn\LICENSE">
+        <Pack>True</Pack>
+        <PackagePath>\</PackagePath>
+      </None>
       <Resource Include="Resources\AppIcon\app.ico">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Resource>
