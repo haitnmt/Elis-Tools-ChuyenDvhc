@@ -164,7 +164,7 @@
                 : tbds
                 .Where(t => int.TryParse(t.SoTo, out _))
                 .Select(t => int.Parse(t.SoTo))
-                .Max();
+                .Max() + 1;
             foreach (var (maDvhc, _, tenDvhc) in 
                      _dvhcTruocs.Where(d => d.MaDvhc != _dvhcSau.MaDvhc))
             {
