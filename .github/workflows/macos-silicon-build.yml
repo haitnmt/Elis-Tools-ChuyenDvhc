@@ -21,18 +21,23 @@ jobs:
         run: |
           echo "Machine architecture: $(uname -m)"
           echo "System information: $(uname -a)"
+      
+      - name: Install .NET MAUI workloads
+        run: |
+          dotnet workload install maui maui-maccatalyst maui-ios
+          dotnet workload restore
     
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Restore dependencies with runtime identifiers
+        run: dotnet restore -r osx-arm64 -r maccatalyst-arm64
     
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build --configuration Release --no-restore /p:RuntimeIdentifier=maccatalyst-arm64
       
       - name: Test
         run: dotnet test --configuration Release --no-build --verbosity normal
       
       - name: Publish for Apple Silicon
-        run: dotnet publish -c Release -r osx-arm64 --self-contained true -o ./publish
+        run: dotnet publish -c Release -r maccatalyst-arm64 --self-contained true -o ./publish
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

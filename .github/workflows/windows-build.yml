@@ -16,18 +16,23 @@ jobs:
         uses: actions/setup-dotnet@v4.3.1
         with:
           dotnet-version: '9.x' # Latest .NET version
-
-      - name: Restore dependencies
-        run: dotnet restore
-
+          
+      - name: Install .NET MAUI workloads
+        run: |
+          dotnet workload install maui
+          dotnet workload restore
+          
+      - name: Restore dependencies with runtime identifiers
+        run: dotnet restore -r win-x64
+      
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build --configuration Release --no-restore /p:RuntimeIdentifier=win-x64
 
       - name: Test
         run: dotnet test --configuration Release --no-build --verbosity normal
 
       - name: Publish
-        run: dotnet publish -c Release -o ./publish
+        run: dotnet publish -c Release -r win-x64 --self-contained true -o ./publish /p:PublishSingleFile=true
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
