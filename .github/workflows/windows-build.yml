@@ -1,8 +1,6 @@
 name: Windows Build
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -11,11 +9,55 @@ jobs:
     steps:
       - name: Check out the code
         uses: actions/checkout@v4.2.0
+        with:
+          fetch-depth: 0 # Required for GitVersion to work correctly
 
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v4.3.1
         with:
-          dotnet-version: '9.x' # Latest .NET version
+          dotnet-version: '9.0.x' # Change to stable .NET 8 version
+          
+      # Install GitVersion
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.10.2
+        with:
+          versionSpec: '5.x'
+          
+      # Generate version
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.10.2
+        with:
+          useConfigFile: true
+          
+      # Display version info
+      - name: Display version info
+        run: |
+          echo "Version: ${{ steps.gitversion.outputs.semVer }}"
+          echo "Assembly version: ${{ steps.gitversion.outputs.assemblySemVer }}"
+          echo "File version: ${{ steps.gitversion.outputs.assemblySemFileVer }}"
+          
+      # Cache .NET packages
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+            
+      # Cache MAUI Workloads
+      - name: Cache MAUI workloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.dotnet/sdk-advertising
+            ~/.dotnet/workloads
+            ~/.dotnet/packs
+            ~/.microsoft/maui
+          key: ${{ runner.os }}-maui-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-maui-
           
       - name: Install .NET MAUI workloads
         run: |
@@ -26,17 +68,17 @@ jobs:
         run: dotnet restore -r win-x64
       
       - name: Build
-        run: dotnet build --configuration Release --no-restore /p:RuntimeIdentifier=win-x64
+        run: dotnet build --configuration Release --no-restore /p:RuntimeIdentifier=win-x64 /p:Version=${{ steps.gitversion.outputs.semVer }} /p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} /p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }}
 
       - name: Test
         run: dotnet test --configuration Release --no-build --verbosity normal
 
       - name: Publish
-        run: dotnet publish -c Release -r win-x64 --self-contained true -o ./publish /p:PublishSingleFile=true
+        run: dotnet publish -c Release -r win-x64 --self-contained true -o ./publish /p:PublishSingleFile=true /p:Version=${{ steps.gitversion.outputs.semVer }} /p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} /p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }}
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-build
+          name: windows-build-v${{ steps.gitversion.outputs.semVer }}
           path: ./publish
           if-no-files-found: error

@@ -1,8 +1,6 @@
 name: macOS Apple Silicon Build
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -11,37 +9,84 @@ jobs:
     steps:
       - name: Check out the code
         uses: actions/checkout@v4.2.0
+        with:
+          fetch-depth: 0 # Required for GitVersion to work correctly
 
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v4.3.1
         with:
           dotnet-version: '9.x' # Latest .NET version
+          
+      # Install GitVersion
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.10.2
+        with:
+          versionSpec: '5.x'
+          
+      # Generate version
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.10.2
+        with:
+          useConfigFile: true
+          
+      # Display version info
+      - name: Display version info
+        run: |
+          echo "Version: ${{ steps.gitversion.outputs.semVer }}"
+          echo "Assembly version: ${{ steps.gitversion.outputs.assemblySemVer }}"
+          echo "File version: ${{ steps.gitversion.outputs.assemblySemFileVer }}"
     
       - name: Check architecture
         run: |
           echo "Machine architecture: $(uname -m)"
           echo "System information: $(uname -a)"
+          
+      # Cache NuGet packages
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+            
+      # Cache MAUI Workloads
+      - name: Cache MAUI workloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.dotnet/sdk-advertising
+            ~/.dotnet/workloads
+            ~/.dotnet/packs
+            ~/.microsoft/maui
+          key: ${{ runner.os }}-maui-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-maui-
       
       - name: Install .NET MAUI workloads
         run: |
           dotnet workload install maui maui-maccatalyst maui-ios
           dotnet workload restore
     
-      - name: Restore dependencies with runtime identifiers
-        run: dotnet restore -r osx-arm64 -r maccatalyst-arm64
+      - name: Restore dependencies
+        run: |
+          dotnet restore
+          dotnet restore -r:maccatalyst-arm64
+          dotnet restore -r:osx-arm64
     
       - name: Build
-        run: dotnet build --configuration Release --no-restore /p:RuntimeIdentifier=maccatalyst-arm64
+        run: dotnet build --configuration Release --no-restore /p:RuntimeIdentifier=maccatalyst-arm64 /p:Version=${{ steps.gitversion.outputs.semVer }} /p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} /p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }}
       
       - name: Test
         run: dotnet test --configuration Release --no-build --verbosity normal
       
       - name: Publish for Apple Silicon
-        run: dotnet publish -c Release -r maccatalyst-arm64 --self-contained true -o ./publish
+        run: dotnet publish -c Release -r maccatalyst-arm64 --self-contained true -o ./publish /p:Version=${{ steps.gitversion.outputs.semVer }} /p:AssemblyVersion=${{ steps.gitversion.outputs.assemblySemVer }} /p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }}
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macos-arm64-build
+          name: macos-arm64-build-v${{ steps.gitversion.outputs.semVer }}
           path: ./publish
           if-no-files-found: error
