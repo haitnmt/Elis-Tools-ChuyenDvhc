@@ -2,9 +2,7 @@ name: Windows Build
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -12,30 +10,29 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: Check out the code
+      - uses: actions/checkout@v4.2.0
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: '9.0.x'
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4.3.1
+        with:
+          dotnet-version: '9.x' # Latest .NET version
 
-    - name: Restore dependencies
-      run: dotnet restore
+      - name: Restore dependencies
+        run: dotnet restore
 
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
 
-    - name: Test
-      run: dotnet test --configuration Release --no-build --verbosity normal
+      - name: Test
+        run: dotnet test --configuration Release --no-build --verbosity normal
 
-    - name: Publish
-      run: dotnet publish -c Release -o ./publish
+      - name: Publish
+        run: dotnet publish -c Release -o ./publish
       
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: windows-build
-        path: ./publish
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-build
+          path: ./publish
 
